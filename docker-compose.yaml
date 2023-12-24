@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  dmdbms:
+    image: dm8:latest
+    ports:
+      - 5236:5236

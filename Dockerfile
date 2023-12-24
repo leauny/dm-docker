@@ -1,37 +1,57 @@
-FROM ubuntu:latest as file
-MAINTAINER leauny leauny@outlook.com
+# install stage
+FROM ubuntu:latest as install
 
-COPY install /home
-COPY dm.bin /home
+ARG DM_BIN=./res/dm.bin
+ARG DM_INSTALL_CONFIG=./res/install.xml
+ARG USELESS_DIR="./doc ./include ./drivers ./uninstall ./samples ./desktop"
 
-RUN apt-get update && \
-    apt-get install -y iputils-ping net-tools tmux less nano && \
-    apt-get clean && \
-    groupadd dinstall && \
+COPY ${DM_BIN} ${DM_INSTALL_CONFIG} /home/
+
+RUN groupadd dinstall && \
+    useradd -g dinstall -ms /bin/bash dmdba && \
+    mkdir /dm8 && chown dmdba:dinstall /dm8 && chmod -R 755 /dm8 && \
+    chmod +x /home/${DM_BIN} && \
+    su dmdba -c "/home/${DM_BIN} -q /home/${DM_INSTALL_CONFIG}" && \
+    cd /dm8/dmdbms && rm -rf ${USELESS_DIR}
+
+# deploy stage
+FROM ubuntu:latest
+
+RUN groupadd dinstall && \
     useradd -g dinstall -ms /bin/bash dmdba && \
     echo 'dmdba:dbmsdba' | chpasswd && \ 
     echo 'root:dbmsdbms' | chpasswd && \
-    echo 'dmdba hard nofile 65536' >> /etc/security/limits.conf && \
-    echo 'dmdba soft nofile 65536' >> /etc/security/limits.conf && \
-    echo 'dmdba hard stack 32768' >> /etc/security/limits.conf && \
-    echo 'dmdba soft stack 16384' >> /etc/security/limits.conf && \
-    mkdir /dm8 && \
-    chmod -R 755 /dm8 && \
-    chown dmdba:dinstall -R /dm8 && \ 
-    chown dmdba:dinstall -R /home/dmdba && \
-    chmod +x /home/dm.bin && \
-    su dmdba && \
-    cat /home/install | /home/dm.bin -i && \ 
-    echo 'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool' >> /home/dmdba/.bash_profile  && \
-    echo 'export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/dm8/bin"' >> /home/dmdba/.bashrc  && \
-    echo 'export DM_HOME="/dm8"' >> /home/dmdba/.bashrc  && \
-    echo 'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool' >> /home/dmdba/.bashrc  && \
-    rm /home/dm.bin /home/install
+    # change /dm8 owner
+    mkdir /dm8 && chown dmdba:dinstall /dm8 && \
+    # config limits
+    echo 'dmdba hard nofile 65536\n' \
+         'dmdba soft nofile 65536\n' \
+         'dmdba hard stack 32768\n' \
+         'dmdba soft stack 16384' >> /etc/security/limits.conf && \
+    # /etc/profile
+    echo 'export DM_HOME="/dm8/dmdbms"\n' \
+         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n' \
+         'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /etc/profile && \
+    # root bashrc
+    echo 'export DM_HOME="/dm8/dmdbms"\n' \
+         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n' \
+         'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /root/.bashrc && \
+    # dmdba bashrc
+    echo 'export DM_HOME="/dm8/dmdbms"\n' \
+         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n' \
+         'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /home/dmdba/.bashrc
+
+USER dmdba
+
+COPY --from=install /dm8 /dm8
 
 WORKDIR /dm8
 
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/dm8/bin" \
-    DM_HOME="/dm8" \ 
-    PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool
-
-CMD ["tmux"]
+CMD echo "init env variables ..." && \
+    export DM_HOME="/dm8/dmdbms" && \
+    export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool && \
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin && \
+    echo "init database ..." && \
+    dminit PATH=/dm8/data/init && \
+    echo "start dm server ..." && \
+    dmserver /dm8/data/init/DAMENG/dm.ini
