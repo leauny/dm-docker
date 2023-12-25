@@ -5,13 +5,14 @@ ARG DM_BIN=./res/dm.bin
 ARG DM_INSTALL_CONFIG=./res/install.xml
 ARG USELESS_DIR="./doc ./include ./drivers ./uninstall ./samples ./desktop"
 
-COPY ${DM_BIN} ${DM_INSTALL_CONFIG} /home/
+COPY ${DM_INSTALL_CONFIG} /home/install.xml
+COPY ${DM_BIN} /home/dm.bin
 
 RUN groupadd dinstall && \
     useradd -g dinstall -ms /bin/bash dmdba && \
     mkdir /dm8 && chown dmdba:dinstall /dm8 && chmod -R 755 /dm8 && \
-    chmod +x /home/${DM_BIN} && \
-    su dmdba -c "/home/${DM_BIN} -q /home/${DM_INSTALL_CONFIG}" && \
+    chmod +x /home/dm.bin && \
+    su dmdba -c "/home/dm.bin -q /home/install.xml" && \
     cd /dm8/dmdbms && rm -rf ${USELESS_DIR}
 
 # deploy stage
