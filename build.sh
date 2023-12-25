@@ -2,7 +2,7 @@
 
 # check args
 if [ "$#" -lt 2 ]; then
-	echo "usage: $0 <dm_bin_path> <dm_install_config>"
+	echo "usage: $0 <dm_bin_path> <dm_install_config> [DOCKER_BUILD_OPTIONS]"
     exit 1
 fi
 
@@ -13,5 +13,5 @@ DM_INSTALL_CONFIG=$2
 shift 2
 
 # build Docker image
-docker build --build-arg DM_BIN=${DM_BIN} --build-arg DM_INSTALL_CONFIG=${DM_INSTALL_CONFIG} "$@" .
+docker build -t dm8 --build-arg DM_BIN=${DM_BIN} --build-arg DM_INSTALL_CONFIG=${DM_INSTALL_CONFIG} "$@" .
 
