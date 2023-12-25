@@ -2,13 +2,13 @@
 
 # check args
 if [ "$#" -lt 2 ]; then
-	echo "usage: $0 <dm_bin_path> <dm_install_config> [DOCKER_BUILD_OPTIONS]"
+	echo "usage: $0 <dm_install_config> <dm_bin_path> [DOCKER_BUILD_OPTIONS]"
     exit 1
 fi
 
 # dm bin file and install config
-DM_BIN=$1
-DM_INSTALL_CONFIG=$2
+DM_INSTALL_CONFIG=$1
+DM_BIN=$2
 
 shift 2
 
