@@ -1,6 +1,8 @@
 # install stage
 FROM ubuntu:latest as install
 
+ARG DM_INSTALL_USER=ubuntu
+ARG DM_INSTALL_GROUP=ubuntu
 ARG DM_BIN=./res/dm.bin
 ARG DM_INSTALL_CONFIG=./res/install.xml
 ARG USELESS_DIR="./doc ./include ./drivers ./uninstall ./samples ./desktop"
@@ -8,43 +10,50 @@ ARG USELESS_DIR="./doc ./include ./drivers ./uninstall ./samples ./desktop"
 COPY ${DM_INSTALL_CONFIG} /home/install.xml
 COPY ${DM_BIN} /home/dm.bin
 
-RUN groupadd dinstall && \
-    useradd -g dinstall -ms /bin/bash dmdba && \
-    mkdir /dm8 && chown dmdba:dinstall /dm8 && chmod -R 755 /dm8 && \
+RUN groupadd -f ${DM_INSTALL_GROUP} && \
+    if [ ! "$(getent passwd ${DM_INSTALL_USER})" ]; then \
+        useradd -g ${DM_INSTALL_GROUP} -ms /bin/bash ${DM_INSTALL_USER} 2>/dev/null; \
+    fi && \
+    mkdir -p /dm8/data && chown ${DM_INSTALL_USER}:${DM_INSTALL_GROUP} /dm8 && \
+    chown ${DM_INSTALL_USER}:${DM_INSTALL_GROUP} /dm8/data && chmod -R 755 /dm8 && \
     chmod +x /home/dm.bin && \
-    su dmdba -c "/home/dm.bin -q /home/install.xml" && \
+    su ${DM_INSTALL_USER} -c "/home/dm.bin -q /home/install.xml" && \
     cd /dm8/dmdbms && rm -rf ${USELESS_DIR}
 
 # deploy stage
 FROM ubuntu:latest
 
-RUN groupadd dinstall && \
-    useradd -g dinstall -ms /bin/bash dmdba && \
-    echo 'dmdba:dbmsdba' | chpasswd && \ 
+ARG DM_INSTALL_USER=ubuntu
+ARG DM_INSTALL_GROUP=ubuntu
+
+RUN groupadd -f ${DM_INSTALL_GROUP} && \
+    if [ ! "$(getent passwd ${DM_INSTALL_USER})" ]; then \
+        useradd -g ${DM_INSTALL_GROUP} -ms /bin/bash ${DM_INSTALL_USER} 2>/dev/null; \
+    fi && \
     echo 'root:dbmsdbms' | chpasswd && \
     # change /dm8 owner
-    mkdir /dm8 && chown dmdba:dinstall /dm8 && \
+    mkdir /dm8 && chown ${DM_INSTALL_USER}:${DM_INSTALL_GROUP} /dm8 && \
     # config limits
-    echo 'dmdba hard nofile 65536\n' \
-         'dmdba soft nofile 65536\n' \
-         'dmdba hard stack 32768\n' \
-         'dmdba soft stack 16384' >> /etc/security/limits.conf && \
+    echo "${DM_INSTALL_USER} hard nofile 65536\n"\
+         "${DM_INSTALL_USER} soft nofile 65536\n"\
+         "${DM_INSTALL_USER} hard stack 32768\n"\
+         "${DM_INSTALL_USER} soft stack 16384" >> /etc/security/limits.conf && \
     # /etc/profile
-    echo 'export DM_HOME="/dm8/dmdbms"\n' \
-         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n' \
+    echo 'export DM_HOME="/dm8/dmdbms"\n'\
+         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n'\
          'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /etc/profile && \
     # root bashrc
-    echo 'export DM_HOME="/dm8/dmdbms"\n' \
-         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n' \
+    echo 'export DM_HOME="/dm8/dmdbms"\n'\
+         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n'\
          'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /root/.bashrc && \
     # dmdba bashrc
-    echo 'export DM_HOME="/dm8/dmdbms"\n' \
-         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n' \
-         'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /home/dmdba/.bashrc
+    echo 'export DM_HOME="/dm8/dmdbms"\n'\
+         'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n'\
+         'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /home/${DM_INSTALL_USER}/.bashrc
 
-USER dmdba
+USER ${DM_INSTALL_USER}
 
-COPY --from=install /dm8 /dm8
+COPY --from=install --chown=${DM_INSTALL_USER}:${DM_INSTALL_GROUP} /dm8 /dm8
 
 WORKDIR /dm8
 
@@ -52,5 +61,4 @@ ENV DM_HOME="/dm8/dmdbms"
 ENV PATH="$PATH:$DM_HOME/bin:$DM_HOME/tool"
 ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DM_HOME/bin"
 
-CMD dminit PATH=/dm8/data/init && \
-    dmserver /dm8/data/init/DAMENG/dm.ini
+CMD dminit PATH=/dm8/data/init && dmserver /dm8/data/init/DAMENG/dm.ini
