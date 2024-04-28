@@ -48,11 +48,9 @@ COPY --from=install /dm8 /dm8
 
 WORKDIR /dm8
 
-CMD echo "init env variables ..." && \
-    export DM_HOME="/dm8/dmdbms" && \
-    export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool && \
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin && \
-    echo "init database ..." && \
-    dminit PATH=/dm8/data/init && \
-    echo "start dm server ..." && \
+ENV DM_HOME="/dm8/dmdbms"
+ENV PATH="$PATH:$DM_HOME/bin:$DM_HOME/tool"
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DM_HOME/bin"
+
+CMD dminit PATH=/dm8/data/init && \
     dmserver /dm8/data/init/DAMENG/dm.ini
