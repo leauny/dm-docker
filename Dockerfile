@@ -46,10 +46,16 @@ RUN groupadd -f ${DM_INSTALL_GROUP} && \
     echo 'export DM_HOME="/dm8/dmdbms"\n'\
          'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n'\
          'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /root/.bashrc && \
-    # dmdba bashrc
-    echo 'export DM_HOME="/dm8/dmdbms"\n'\
+    # DM_INSTALL_USER bashrc
+    echo 'export DM_HOME="/dm8/dmdbms"'\
          'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n'\
          'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /home/${DM_INSTALL_USER}/.bashrc
+
+RUN apt-get update && \
+    apt-get install -y sudo nftables && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* &&\
+    echo "${DM_INSTALL_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 USER ${DM_INSTALL_USER}
 
