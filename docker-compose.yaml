@@ -2,6 +2,7 @@ version: '3'
 
 services:
   dmdbms:
+    container_name: dm8
     image: dm8:latest
     ports:
       - 5236:5236

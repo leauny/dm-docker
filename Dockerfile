@@ -1,5 +1,5 @@
 # install stage
-FROM ubuntu:latest as install
+FROM ubuntu:jammy-20240911.1 AS install
 
 ARG DM_INSTALL_USER=ubuntu
 ARG DM_INSTALL_GROUP=ubuntu
@@ -25,7 +25,7 @@ RUN mkdir -p /dm8/data && \
     cd /dm8/dmdbms && rm -rf ${USELESS_DIR}
 
 # deploy stage
-FROM ubuntu:latest
+FROM ubuntu:jammy-20240911.1
 
 ARG DM_INSTALL_USER=ubuntu
 ARG DM_INSTALL_GROUP=ubuntu
@@ -55,11 +55,7 @@ RUN groupadd -f ${DM_INSTALL_GROUP} && \
          'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n'\
          'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /home/${DM_INSTALL_USER}/.bashrc
 
-RUN apt-get update && \
-    apt-get install -y sudo nftables libdwarf-dev  && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* &&\
-    echo "${DM_INSTALL_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list
 
 USER ${DM_INSTALL_USER}
 
@@ -68,7 +64,7 @@ COPY --from=install --chown=${DM_INSTALL_USER}:${DM_INSTALL_GROUP} /dm8 /dm8
 WORKDIR /dm8
 
 ENV DM_HOME="/dm8/dmdbms"
-ENV PATH="$PATH:$DM_HOME/bin:$DM_HOME/tool"
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DM_HOME/bin"
+ENV PATH="$DM_HOME/bin:$DM_HOME/tool"
+ENV LD_LIBRARY_PATH="$DM_HOME/bin"
 
-CMD dminit PATH=/dm8/data/init && dmserver /dm8/data/init/DAMENG/dm.ini
+CMD ["/usr/bin/bash", "-c", "dminit PATH=/dm8/data/init && dmserver /dm8/data/init/DAMENG/dm.ini"]
