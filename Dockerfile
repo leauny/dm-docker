@@ -55,16 +55,24 @@ RUN groupadd -f ${DM_INSTALL_GROUP} && \
          'export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool\n'\
          'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin' >> /home/${DM_INSTALL_USER}/.bashrc
 
-RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list
+RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list && \
+  apt update && \
+  apt install -y tzdata sudo tmux vim iproute2 inetutils-ping && \
+  apt clean && \
+  rm -rf /var/lib/apt/lists/* && \
+  echo "${DM_INSTALL_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
+  cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+  echo "Asia/Shanghai" > /etc/timezone
+
+ENV TZ=Asia/Shanghai
+ENV DM_HOME="/dm8/dmdbms"
+ENV PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool
+ENV LD_LIBRARY_PATH="$DM_HOME/bin"
 
 USER ${DM_INSTALL_USER}
 
 COPY --from=install --chown=${DM_INSTALL_USER}:${DM_INSTALL_GROUP} /dm8 /dm8
 
 WORKDIR /dm8
-
-ENV DM_HOME="/dm8/dmdbms"
-ENV PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool
-ENV LD_LIBRARY_PATH="$DM_HOME/bin"
 
 CMD ["/usr/bin/bash", "-c", "dminit PATH=/dm8/data/init && dmserver /dm8/data/init/DAMENG/dm.ini"]
