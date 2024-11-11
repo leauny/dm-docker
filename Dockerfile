@@ -64,7 +64,7 @@ COPY --from=install --chown=${DM_INSTALL_USER}:${DM_INSTALL_GROUP} /dm8 /dm8
 WORKDIR /dm8
 
 ENV DM_HOME="/dm8/dmdbms"
-ENV PATH="$DM_HOME/bin:$DM_HOME/tool"
+ENV PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool
 ENV LD_LIBRARY_PATH="$DM_HOME/bin"
 
 CMD ["/usr/bin/bash", "-c", "dminit PATH=/dm8/data/init && dmserver /dm8/data/init/DAMENG/dm.ini"]
